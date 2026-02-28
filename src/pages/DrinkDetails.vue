@@ -2,8 +2,10 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { getDrinkById } from '../services/drinksService'
+import { useFavoritesStore } from '../stores/useFavoritesStore'
 
 const route = useRoute()
+const favoritesStore = useFavoritesStore()
 
 const drink = ref<any>(null)
 const loading = ref(false)
@@ -12,9 +14,10 @@ const loadDrink = async () => {
     loading.value = true
     try {
         const { data } = await getDrinkById(route.params.id as string)
-        drink.value = data.drinks[0]
+        drink.value = data.drinks?.[0] ?? null
     } catch (error) {
         console.error(error)
+        drink.value = null
     } finally {
         loading.value = false
     }
@@ -43,19 +46,31 @@ const ingredients = computed(() => {
 </script>
 
 <template>
-    <div class="details" v-if="drink">
+    <!-- LOADING -->
+    <div v-if="loading" class="details">
+        <p>Carregando...</p>
+    </div>
+
+    <!-- DRINK ENCONTRADO -->
+    <div v-else-if="drink" class="details">
         <button class="back" @click="$router.back()">← Voltar</button>
 
-        <div v-if="loading">Carregando...</div>
-
         <div class="content">
-            <img :src="drink.strDrinkThumb" :alt="drink.strDrink" />
+            <div class="image-wrapper">
+                <img :src="drink.strDrinkThumb" :alt="drink.strDrink" />
+            </div>
 
             <div class="info">
-                <h1>{{ drink.strDrink }}</h1>
+                <div class="title-row">
+                    <h1>{{ drink.strDrink }}</h1>
+
+                    <button class="favorite-btn" @click="favoritesStore.toggleFavorite(drink.idDrink)">
+                        {{ favoritesStore.favorites.includes(drink.idDrink) ? '★' : '☆' }}
+                    </button>
+                </div>
 
                 <h3>Ingredientes</h3>
-                <ul>
+                <ul class="ingredients">
                     <li v-for="item in ingredients" :key="item">
                         {{ item }}
                     </li>
@@ -66,46 +81,85 @@ const ingredients = computed(() => {
             </div>
         </div>
     </div>
+
+    <!-- NÃO ENCONTRADO -->
+    <div v-else class="details">
+        <p>Drink não encontrado.</p>
+    </div>
 </template>
 
 <style scoped lang="scss">
 .details {
-    padding: 2rem;
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 1rem;
 
     .back {
-        margin-bottom: 1rem;
-        border: none;
+        margin-bottom: 2rem;
         background: none;
+        border: none;
+        font-weight: 600;
         cursor: pointer;
-        font-weight: bold;
     }
 
     .content {
         display: flex;
-        gap: 2rem;
+        gap: 3rem;
+        align-items: flex-start;
         flex-wrap: wrap;
+    }
+
+    .image-wrapper {
+        flex: 1;
+        min-width: 300px;
 
         img {
-            max-width: 400px;
             width: 100%;
-            border-radius: 12px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+    }
+
+    .info {
+        flex: 1;
+        min-width: 300px;
+
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
         }
 
-        .info {
-            flex: 1;
-            min-width: 250px;
+        h1 {
+            font-size: 2.5rem;
+            margin: 0;
+        }
 
-            h1 {
-                margin-bottom: 1rem;
-            }
+        .favorite-btn {
+            font-size: 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
 
-            h3 {
-                margin-top: 1.5rem;
-            }
+        h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.5rem;
+        }
 
-            ul {
-                padding-left: 1rem;
+        .ingredients {
+            list-style: none;
+            padding: 0;
+
+            li {
+                margin-bottom: 0.3rem;
             }
+        }
+
+        p {
+            line-height: 1.6;
+            color: #444;
         }
     }
 }
