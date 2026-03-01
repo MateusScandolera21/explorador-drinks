@@ -77,7 +77,7 @@ Execute o projeto:
 
 O projeto iniciará em http://localhost:5173
 
---
+---
 
 ## Link da API utilizada:
 
